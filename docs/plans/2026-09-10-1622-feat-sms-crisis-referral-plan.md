@@ -169,7 +169,7 @@ All items below were deferred to planning and are now resolved in the Planning C
 
 ### Key Technical Decisions
 
-- KTD1. **FastAPI app on Fly.io, Supabase (Postgres) for all persistent storage via `supabase-py`.** Matches the stack discussed favorably during brainstorming: Fly.io gives a cheap container host with a public HTTPS endpoint for the SMS gateway's webhook, and Supabase's Python client removes the need for a separate ORM. Governs backend/hosting from Outstanding Questions.
+- KTD1. **FastAPI app on Fly.io, Supabase (Postgres) for all persistent storage via `supabase-py`.** Matches the stack discussed favorably during brainstorming: Fly.io gives a cheap container host with a public HTTPS endpoint for the SMS gateway's webhook, and Supabase's Python client removes the need for a separate ORM.
 - KTD2. **Twilio Programmable Messaging for the SMS gateway** — inbound webhook to a FastAPI route, outbound replies via Twilio's REST client. Mature two-way SMS provider with a first-party Python SDK; no meaningful advantage from alternatives (Vonage, MessageBird) at this scope.
 - KTD3. **Mapbox Geocoding API converts the client's address to coordinates transiently; each service centre stores a fixed lat/long; distance is a server-side haversine calculation.** Keeps the geocoded coordinate out of storage entirely (R6) — only the derived suburb persists on the client record. Nominatim (OSM) is a viable free drop-in if Mapbox cost or its usage terms become a concern at higher volume.
 - KTD4. **One LLM-backed conversational service drives intake, and the same per-turn call also classifies danger-signal language**, returned as a structured field alongside the reply. Reuses the call that already reads every inbound message instead of adding a second detection system; keyword lists undercatch the varied phrasing a crisis-intake channel sees. Governs R4.
@@ -185,7 +185,7 @@ All items below were deferred to planning and are now resolved in the Planning C
 
 ### Sequencing
 
-U1 (data model) is the foundation every other unit reads or writes against. U2 (SMS webhook) can proceed in parallel with U1. U3 (intake agent) and U4 (danger-signal detection) share one LLM call and land together once U1+U2 exist. U5 (safe-word) and U6 (geocoding) depend only on U1+U2. U7 (matching) depends on U1, U3, and U6. U8 (results delivery) depends on U7. U9 (notification handoff) depends on U8. U10 (deletion) is a shared helper invoked by U5 and U9, so it lands before either calls it.
+U1 (data model) is the foundation every other unit reads or writes against; U10 (deletion) needs only U1, so it lands early alongside U1 since both U5 and U9 call it. U2 (SMS webhook) can proceed in parallel with U1. U3 (intake agent) depends on U1 and U2; U4 (danger-signal detection) shares U3's LLM call and lands with it. U5 (safe-word) depends on U1, U2, and U10. U6 (geocoding) depends only on U1. U7 (matching) depends on U1, U3, and U6. U8 (results delivery) depends on U7. U9 (notification handoff) depends on U8, U1, and U10.
 
 ---
 
