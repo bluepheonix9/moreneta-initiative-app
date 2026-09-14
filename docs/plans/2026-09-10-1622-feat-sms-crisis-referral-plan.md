@@ -313,3 +313,31 @@ No repo tooling exists yet (greenfield); this unit's scaffolding (`pyproject.tom
 - No dead-end or experimental code from approaches that didn't pan out remains in the diff.
 - `artifact_readiness: implementation-ready` holds: no launch-blocking open question remains (confirmed above — all five deferred items are resolved by KTD1, KTD4, KTD5, KTD6, KTD7).
 
+---
+
+Points Added - Not in the Unedited Plan
+
+The following points were noticed during review and were not included in the original plan.
+
+Transcript storage could expose the full address.
+R6 says that the client's exact address should not be stored. However, the client sends their address through SMS, and U1 currently stores the full conversation in the transcript. This means the address could still end up in the database even though only the suburb is stored in the client record. Fix: redact the address from the transcript before it is stored, and add a test to make sure the full address is never saved.
+There is no cleanup if a client stops replying.
+R8 only deletes the client's information after a notification, a declined notification, or a safe-word. If a client stops responding part way through the conversation, their information could stay in the database indefinitely. Fix: add an inactivity timeout that deletes the client record after a set amount of time with no response.
+R11 does not fully match the acceptance example.
+R11 says that non-active centres can either be excluded or moved lower in the ranking. However, U7 currently excludes them from the query, while AE4 expects an at-capacity centre to still appear below an active centre. Fix: exclude closed centres, but keep at-capacity centres in the results and rank them below active centres.
+The LLM provider has not been specified.
+KTD4 sends all of the intake messages through an LLM, which could include sensitive information such as domestic violence or child-safety disclosures. The current plan does not say which provider will be used or what happens to the data after it is sent. Fix: choose a provider with suitable data retention settings and add this as an explicit technical decision.
+The no-match response could be improved.
+If there are no suitable service centres, the current plan only sends a generic no-match message. For someone in a crisis, this may not be enough. Fix: include the crisis-line contact information in the no-match response as well.
+The terminology is slightly inconsistent.
+The Goal Capsule and Problem Frame use the term "homelessness", while the taxonomy uses "housing". These should be made consistent so it is clear that they refer to the same category.
+Staff database access could expose client information.
+Staff need database access to update the service centre information, but the current plan does not prevent that access from also being used to view client records and conversation data. Fix: restrict staff access to the service centre tables using RLS or a separate database credential.
+The safe-word deletion behaviour should be stated more clearly.
+R5 says that the safe-word clears or obscures recent message content, but it does not clearly state whether the entire client record is also deleted. Fix: state that using the safe-word deletes the full client record through the same U10 deletion process.
+There is no rate limiting on the SMS webhook.
+Every incoming SMS can result in an LLM call and possibly a Mapbox request. This could become expensive if a large number of messages are sent to the public number. Fix: add basic rate limiting based on the sender's phone number.
+Twilio message retention is not covered.
+The deletion process only removes data from our own database. Twilio may still retain copies of the messages. Fix: check Twilio's data retention settings and configure them to match the privacy requirements of the system.
+Child-safety reporting requirements need to be checked.
+The current plan does not address whether information collected about a child-safety case could create a mandatory reporting requirement. This is mainly a legal and policy issue, but it should be confirmed before the system is built, especially because the current design does not include human escalation.
